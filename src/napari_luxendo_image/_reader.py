@@ -1,12 +1,8 @@
-"""
-This module is an example of a barebones numpy reader plugin for napari.
+import json
 
-It implements the Reader specification, but your plugin may choose to
-implement multiple readers or even other plugin contributions. see:
-https://napari.org/stable/plugins/building_a_plugin/guides.html#readers
-"""
-
+import h5py
 import numpy as np
+from dask import array as da
 
 
 def napari_get_reader(path):
@@ -24,28 +20,12 @@ def napari_get_reader(path):
         same path or list of paths, and returns a list of layer data tuples.
     """
     if isinstance(path, list):
-        # reader plugins may be handed single path, or a list of paths.
-        # if it is a list, it is assumed to be an image stack...
-        # so we are only going to look at the first file.
-        path = path[0]
-
-    # the get_reader function should make as many checks as possible
-    # (without loading the full file) to determine if it can read
-    # the path. Here, we check the dtype of the array by loading
-    # it with memmap, so that we don't actually load the full array into memory.
-    # We pretend that this reader can only read integer arrays.
-    try:
-        arr = np.load(path, mmap_mode="r")
-        if arr.dtype != np.int_:
+        if any(not str(p).lower().endswith(".lux.h5") for p in path):
             return None
-    # napari_get_reader should never raise an exception, because napari
-    # raises its own specific errors depending on what plugins are
-    # available for the given path, so we catch
-    # the OSError that np.load might raise if the file is malformed
-    except OSError:
-        return None
+    else:
+        if not str(path).lower().endswith(".lux.h5"):
+            return None
 
-    # otherwise we return the *function* that can read ``path``.
     return reader_function
 
 
@@ -71,15 +51,67 @@ def reader_function(path):
         layer. Both "meta", and "layer_type" are optional. napari will
         default to layer_type=="image" if not provided
     """
-    # handle both a string and a list of strings
-    paths = [path] if isinstance(path, str) else path
-    # load all files into array
-    arrays = [np.load(_path) for _path in paths]
-    # stack arrays into single array
-    data = np.squeeze(np.stack(arrays))
+    if isinstance(path, str):
+        data, metadata = _load_lux_h5(path)
+        metadata = json.loads(metadata)
+    elif isinstance(path, list):
+        _data, _metadata = zip(*[_load_lux_h5(p) for p in path], strict=True)
+        n_scales = len(_data[0])
+        data = [
+            da.stack([d[s] for d in _data], axis=0) for s in range(n_scales)
+        ]
+        metadata = json.loads(_metadata[0])
 
     # optional kwargs for the corresponding viewer.add_* method
     add_kwargs = {}
 
+    voxel_size = metadata.get("processingInformation", {}).get(
+        "voxel_size_um", None
+    )
+    if voxel_size is not None:
+        add_kwargs["scale"] = (
+            voxel_size["depth"],
+            voxel_size["height"],
+            voxel_size["width"],
+        )
+
     layer_type = "image"  # optional, default is "image"
     return [(data, add_kwargs, layer_type)]
+
+
+def _load_lux_h5(path):
+    """Load a single .lux.h5 file.
+
+    Parameters
+    ----------
+    path : str
+        Path to the .lux.h5 file.
+
+    Returns
+    -------
+    data : list of dask.array.Array
+        The image data contained in the .lux.h5 file as a list of dask arrays.
+    metadata : str
+        The metadata contained in the .lux.h5 file.
+    """
+    file = h5py.File(path, "r")
+    data_keys = sorted([key for key in file if key.startswith("Data")])
+    # TODO: handle nested dataset structure
+    if "Data" not in data_keys:
+        raise ValueError("No 'Data' datasets found in .lux.h5 file.")
+    if "metadata" not in file:
+        raise ValueError("No 'metadata' key found in .lux.h5 file.")
+
+    data = []
+    for key in data_keys:
+        dataset = file[key]
+        dask_array = da.from_array(
+            # TODO: make chunk size multiplier configurable
+            dataset,
+            chunks=tuple(x * 4 for x in dataset.chunks),
+        )
+        data.append(dask_array)
+
+    metadata = np.array(file["metadata"]).item().decode("ascii")
+
+    return data, metadata
