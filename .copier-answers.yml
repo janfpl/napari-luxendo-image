@@ -1,0 +1,18 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: v2.0.1
+_src_path: https://github.com/napari/napari-plugin-template
+display_name: Luxendo Image
+email: jasyang@stanford.edu
+full_name: Jason Yang
+github_repository_url: provide later
+github_username_or_organization: jason-yang-0
+include_reader_plugin: true
+include_sample_data_plugin: false
+include_widget_plugin: false
+include_writer_plugin: false
+install_dependabot: false
+install_precommit: true
+license: MIT
+module_name: napari_luxendo_image
+plugin_name: napari-luxendo-image
+short_description: Unofficial reader for Luxendo Image format

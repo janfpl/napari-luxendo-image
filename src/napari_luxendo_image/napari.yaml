@@ -1,0 +1,15 @@
+name: napari-luxendo-image
+display_name: Luxendo Image
+# use 'hidden' to remove plugin from napari hub search results
+visibility: public
+# see https://napari.org/stable/plugins/technical_references/manifest.html#fields for valid categories
+# categories: []
+contributions:
+  commands:
+    - id: napari-luxendo-image.get_reader
+      python_name: napari_luxendo_image._reader:napari_get_reader
+      title: Open data with Luxendo Image
+  readers:
+    - command: napari-luxendo-image.get_reader
+      accepts_directories: false
+      filename_patterns: ['*.npy']
