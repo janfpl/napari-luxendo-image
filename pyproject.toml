@@ -32,18 +32,25 @@ dependencies = [
     "numpy",
     "h5py",
     "dask",
+    "tifffile",
+    "psutil",
+    "qtpy",
 ]
 
 [project.optional-dependencies]
 # Allow easily installation with the full, default napari installation
 # (including Qt backend) using napari-luxendo-image[all].
 all = ["napari[all]"]
+# Multi-threaded pyramid reduction for .lux.h5 export (falls back to numpy).
+numba = ["numba>=0.60"]
 
 [dependency-groups]
 dev = [
     "tox-uv",
     "pytest",  # https://docs.pytest.org/en/latest/contents.html
     "pytest-cov",  # https://pytest-cov.readthedocs.io/en/latest/
+    "pytest-qt",  # widget tests
+    "napari[all]",  # widget tests
 ]
 
 [project.entry-points."napari.manifest"]

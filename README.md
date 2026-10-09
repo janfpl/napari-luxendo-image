@@ -37,7 +37,32 @@ If napari is not already installed, you can install `napari-luxendo-image` with 
 pip install "napari-luxendo-image[all]"
 ```
 
+For faster pyramid generation during export, also install numba:
 
+```
+pip install "napari-luxendo-image[numba]"
+```
+
+## Exporting
+
+**Plugins > Luxendo Image > Export (.lux.h5 / BigTIFF)** opens a panel that
+writes a layer opened with this plugin back to disk:
+
+- **Output format**: Luxendo `.lux.h5` (full-resolution `Data` plus the
+  original `metadata`) or BigTIFF (one page per Z-plane). A layer stacked from
+  several files is exported as one file per channel.
+- **Export region**: the full volume, or an ROI. Click *Draw ROI rectangle* to
+  set the Y/X bounds from a rectangle in the viewer, use the *Z start/stop =
+  current slice* buttons, or type any of the six bounds directly.
+- **Pyramid layers** (`.lux.h5` only): regenerate the source file's
+  `Data_W_H_D` resolution levels, or untick for the fastest export.
+- **Companion headers** (`.lux.h5` only): Imaris `.ims` and BigDataViewer
+  `*_bdv.h5`/`*_bdv.xml` headers next to the source files are copied, or
+  rebuilt to match an ROI or a pyramid-less export.
+
+Full-volume `.lux.h5` exports keep the original filenames so the headers keep
+working; ROI exports get a `_roi` suffix. A `luxendo_export.json` summary is
+written alongside. The output directory must differ from the source directory.
 
 ## Contributing
 

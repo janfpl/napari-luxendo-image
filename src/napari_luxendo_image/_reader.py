@@ -4,6 +4,9 @@ import h5py
 import numpy as np
 from dask import array as da
 
+# Layer-metadata key holding the .lux.h5 file(s) a layer was read from.
+SOURCE_PATHS_KEY = "luxendo_source_paths"
+
 
 def napari_get_reader(path):
     """A basic implementation of a Reader contribution.
@@ -63,7 +66,12 @@ def reader_function(path):
         metadata = json.loads(_metadata[0])
 
     # optional kwargs for the corresponding viewer.add_* method
-    add_kwargs = {}
+    paths = [path] if isinstance(path, str) else list(path)
+    add_kwargs = {
+        # One source file per channel (in stacking order); the export
+        # widget uses these to write .lux.h5 / BigTIFF from the originals.
+        "metadata": {SOURCE_PATHS_KEY: [str(p) for p in paths]},
+    }
 
     voxel_size = metadata.get("processingInformation", {}).get(
         "voxel_size_um", None

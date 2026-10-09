@@ -9,7 +9,13 @@ contributions:
     - id: napari-luxendo-image.get_reader
       python_name: napari_luxendo_image._reader:napari_get_reader
       title: Open data with Luxendo Image
+    - id: napari-luxendo-image.export_widget
+      python_name: napari_luxendo_image._widget:LuxendoExportWidget
+      title: Export Luxendo data (.lux.h5 / BigTIFF)
   readers:
     - command: napari-luxendo-image.get_reader
       accepts_directories: false
       filename_patterns: ["*.lux.h5"]
+  widgets:
+    - command: napari-luxendo-image.export_widget
+      display_name: Export (.lux.h5 / BigTIFF)

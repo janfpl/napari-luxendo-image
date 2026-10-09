@@ -1,39 +1,34 @@
 import numpy as np
 
 from napari_luxendo_image import napari_get_reader
+from napari_luxendo_image._reader import SOURCE_PATHS_KEY
 
 
-# tmp_path is a pytest fixture
-def test_reader(tmp_path):
-    """An example of how you might test your plugin."""
-
-    # write some fake data using your supported file format
-    # we make the array an integer type to be compatible with the reader
-    my_test_file = str(tmp_path / "myfile.npy")
-    original_data = np.random.rand(20, 20).astype(np.int_)
-    np.save(my_test_file, original_data)
-
-    reader = napari_get_reader(my_test_file)
+def test_reader_single_file(lux_dataset):
+    path = str(lux_dataset["paths"][0])
+    reader = napari_get_reader(path)
     assert callable(reader)
 
-    # make sure we're delivering the right format
-    layer_data_list = reader(my_test_file)
-    assert isinstance(layer_data_list, list) and len(layer_data_list) > 0
-    layer_data_tuple = layer_data_list[0]
-    assert isinstance(layer_data_tuple, tuple) and len(layer_data_tuple) > 0
+    layer_data_list = reader(path)
+    assert len(layer_data_list) == 1
+    data, add_kwargs, layer_type = layer_data_list[0]
 
-    # make sure it's the same as it started
-    np.testing.assert_allclose(original_data, layer_data_tuple[0])
+    assert layer_type == "image"
+    np.testing.assert_array_equal(
+        np.asarray(data[0]), lux_dataset["arrays"][0]
+    )
+    assert add_kwargs["scale"] == (2.0, 0.5, 0.5)
+    assert add_kwargs["metadata"][SOURCE_PATHS_KEY] == [path]
 
 
-def test_get_reader_pass(tmp_path):
-    reader = napari_get_reader("fake.file")
-    assert reader is None
+def test_reader_stacked_files(lux_dataset):
+    paths = [str(p) for p in lux_dataset["paths"]]
+    data, add_kwargs, _ = napari_get_reader(paths)(paths)[0]
 
-    # the original_data is a float type, so the reader should return None
-    my_test_file = str(tmp_path / "myfile.npy")
-    original_data = np.random.rand(20, 20)
-    np.save(my_test_file, original_data)
+    assert data[0].shape == (2, *lux_dataset["shape"])
+    assert add_kwargs["metadata"][SOURCE_PATHS_KEY] == paths
 
-    reader = napari_get_reader(my_test_file)
-    assert reader is None
+
+def test_get_reader_pass():
+    assert napari_get_reader("fake.file") is None
+    assert napari_get_reader(["a.lux.h5", "b.tif"]) is None
